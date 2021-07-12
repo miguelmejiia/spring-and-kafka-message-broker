@@ -13,6 +13,8 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.SendResult;
 import org.springframework.util.concurrent.ListenableFuture;
 
+import java.util.List;
+
 @SpringBootApplication
 public class KafkaSpringMsbrApplication implements CommandLineRunner {
 
@@ -21,9 +23,14 @@ public class KafkaSpringMsbrApplication implements CommandLineRunner {
 	@Autowired
 	private KafkaTemplate<String, String> kafkaTemplate;
 
-	@KafkaListener(topics="java-topic", groupId = "java-group")
-	public void listen(String message){
-		log.info("Message received {} ", message);
+	@KafkaListener(topics="java-topic", containerFactory = "listenerContainerFactory", groupId = "java-group",
+		properties = {"max.poll.interval.ms:4000", "max.poll.records:10"})
+	public void listen(List<String> messages){
+		log.info("Start reading messages");
+		for (String message: messages) {
+			log.info("Message received {}", message);
+		}
+		log.info("Batch complete");
 	}
 
 	public static void main(String[] args) {
@@ -32,7 +39,7 @@ public class KafkaSpringMsbrApplication implements CommandLineRunner {
 
 	@Override
 	public void run(String... args) throws Exception {
-		ListenableFuture<SendResult <String, String>> future =  kafkaTemplate.send("java-topic", "Sample message");
+		/*ListenableFuture<SendResult <String, String>> future =  kafkaTemplate.send("java-topic", "Sample message");
 		future.addCallback(new KafkaSendCallback<String, String>() {
 
 			@Override
@@ -49,6 +56,9 @@ public class KafkaSpringMsbrApplication implements CommandLineRunner {
 			public void onFailure(KafkaProducerException e) {
 				log.error("Error sending message ", e);
 			}
-		});
+		});*/
+		for (int i = 0; i < 100; i++) {
+			kafkaTemplate.send("java-topic", String.format("Sample message %d", i));
+		}
 	}
 }
